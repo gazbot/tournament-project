@@ -60,7 +60,7 @@ CREATE TABLE t_matches
     player_id   INTEGER NOT NULL REFERENCES t_players(player_id),
     result_type VARCHAR(1) NOT NULL
 );
-CREATE INDEX i_matches_idx1  ON t_matches (tourn_id, player_id, match_no);
+CREATE INDEX i_matches_idx1 ON t_matches (tourn_id, player_id, match_no);
 CREATE INDEX i_matches_idx2 ON t_matches (tourn_id, player_id, result_type);
 
 
