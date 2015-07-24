@@ -6,7 +6,7 @@
 -- You can write comments in this file by starting them with two dashes, like
 -- these lines here.
 
-
+CREATE DATABASE tournament;
 -- Make sure we are using the right database
 \c tournament;
 
@@ -60,9 +60,8 @@ CREATE TABLE t_matches
     player_id   INTEGER NOT NULL REFERENCES t_players(player_id),
     result_type VARCHAR(1) NOT NULL
 );
-CREATE INDEX i_matches_idx1 ON t_matches (tourn_id);
-CREATE INDEX i_matches_idx2 ON t_matches (tourn_id, match_id);
-CREATE INDEX i_matches_idx3 ON t_matches (tourn_id, match_id, match_no);
+CREATE INDEX i_matches_idx1  ON t_matches (tourn_id, player_id, match_no);
+CREATE INDEX i_matches_idx2 ON t_matches (tourn_id, player_id, result_type);
 
 
 --    Table      : t_registrations
