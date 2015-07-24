@@ -32,7 +32,7 @@ python tournament_test.sql
 ```
 
 ## References
-[Wizards of the Coast](http://www.wizards.com/dci/downloads/swiss_pairings.pdf)
-[tsh: Pairing Theory](http://www.poslarchive.com/math/software/tsh/doc/pairing.html#swiss)
-[SQL - NTILE examples](http://sqlandme.com/2011/06/30/sql-functions-ntile/)
-[Wikipedia - Swiss Tournament System](https://en.wikipedia.org/wiki/Swiss-system_tournament#Final_scores_and_tie-breaking)
+* [Wizards of the Coast](http://www.wizards.com/dci/downloads/swiss_pairings.pdf)
+* [tsh: Pairing Theory](http://www.poslarchive.com/math/software/tsh/doc/pairing.html#swiss)
+* [SQL - NTILE examples](http://sqlandme.com/2011/06/30/sql-functions-ntile/)
+* [Wikipedia - Swiss Tournament System](https://en.wikipedia.org/wiki/Swiss-system_tournament#Final_scores_and_tie-breaking)
