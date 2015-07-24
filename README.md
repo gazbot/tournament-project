@@ -18,19 +18,11 @@ I have chosen to implement all extra credit features and test cases.
  * CASE statements are used to convert the existence of a value into a numeric values for SUM's
 
 **Usage**
-
-1.
-```bash
-psql
+Load the DB Schema provided in tournament.sql into PSQL
 ```
-2. 
+psql -f tournament.sql
 ```
-boxname=> \i tournament.sql
-<tables/views created>
-boxname=> \q
+Execute the provided test cases to validate API.
 ```
-
-3. 
-```bash
 python tournament_test.sql
 ```
