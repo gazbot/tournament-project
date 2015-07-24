@@ -3,13 +3,13 @@ Udacity Tournament Project
 
 I have chosen to implement all extra credit features and test cases.
 
-**Included Files**
+## Included Files
  * `tournament.sql` - Table and View definitions which support the tournament API
  * `tournament.py` - Python Tournament API
  * `tournament_test.py` - Python file containing all test cases.
  * `README.md` - this file.
 
-**SQL Standards**
+## SQL Standards
  * Tables are prefixed with 't_'.
  * Views are prefixed with 'v_'.
  * Indices are prefixed with 'i_'.
@@ -17,7 +17,7 @@ I have chosen to implement all extra credit features and test cases.
  * COALESCE is used to make sure NULL's from left outer joins are counted as zeroes correctly.
  * CASE statements are used to convert the existence of a value into a numeric values for SUM's
 
-**Usage**
+## Usage
 Load the DB Schema provided in tournament.sql into PSQL
 ```
 psql -f tournament.sql
