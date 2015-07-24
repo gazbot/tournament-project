@@ -15,12 +15,12 @@ def createTournament(tourn_description, tourn_date):
     """Create new tournament, return the tournament ID"""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""insert into t_tournaments (tourn_description,
-                                             tourn_date)
-                                    values  (%s, %s)""",
+    cur.execute("""INSERT INTO t_tournaments (tourn_description,
+                                              tourn_date)
+                                      VALUES (%s, %s)""",
                 (tourn_description, tourn_date, ))
     conn.commit()
-    cur.execute("""select max(tourn_id) from t_tournaments""")
+    cur.execute("""SELECT MAX(tourn_id) FROM t_tournaments""")
     row = cur.fetchone()
 
     return row[0]
@@ -30,16 +30,17 @@ def deleteMatches(tourn_id):
     """Remove all the match records from the database."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""delete from t_matches where tourn_id = %s""", (tourn_id,))
+    cur.execute("""DELETE FROM t_matches WHERE tourn_id = %s""", (tourn_id,))
     conn.commit()
     conn.close()
 
 
 def deletePlayers(tourn_id):
-    """Remove all the player records from the database."""
+    """Remove all the player records from the database for the tournament
+       specified."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("delete from t_registrations where tourn_id = %s", (tourn_id,))
+    cur.execute("DELETE FROM t_registrations WHERE tourn_id = %s", (tourn_id,))
     conn.commit()
     conn.close()
 
@@ -48,9 +49,9 @@ def countPlayers(tourn_id):
     """Returns the number of players currently registered."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""select count(r.player_id) as player_count
-                     from t_registrations r
-                    where r.tourn_id = %s""", (tourn_id,))
+    cur.execute("""SELECT COUNT(r.player_id) AS player_count
+                     FROM t_registrations r
+                    WHERE r.tourn_id = %s""", (tourn_id,))
     row = cur.fetchone()
     conn.close()
     return row[0]
@@ -67,44 +68,47 @@ def registerPlayer(tourn_id, name):
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("insert into t_players (player_name) values (%s)", (name,))
+    cur.execute("INSERT INTO t_players (player_name) VALUES (%s)", (name,))
     conn.commit()
-    cur.execute("""insert into t_registrations (tourn_id, player_id) as
-                   select t.tourn_id,
-                          (select max(player_id)
-                             from t_players) as new_player_id)
-                     from t_tournaments t
-                    where t.tourn_id = %s""", (tourn_id, ))
+    cur.execute("""INSERT INTO t_registrations (tourn_id, player_id)
+                   SELECT t.tourn_id,
+                          (SELECT MAX(player_id)
+                             FROM t_players) AS new_player_id
+                     FROM t_tournaments t
+                    WHERE t.tourn_id = %s""", (tourn_id, ))
     conn.commit()
     conn.close()
 
-    return row[0]
-
 
 def playerStandings(tourn_id):
-    """Returns a list of the players and their win records, sorted by wins.
+    """Returns a list of the players and their match records sorted by wins.
 
     The first entry in the list should be the player in first place, or a
     player tied for first place if there is currently a tie.
 
     Returns:
-      A list of tuples, each of which contains (id, name, wins, matches):
+      A list of tuples, each of which contains
+      (id, name, wins, losses, draws, matches, opponent_match_wins):
         id: the player's unique id (assigned by the database)
         name: the player's full name (as registered)
         wins: the number of matches the player has won
+        losses: the number of matches the player has lost
+        draws: the number of matches the played has drawn
         matches: the number of matches the player has played
+        opponent_match_wins: the number of matches won by each opponent
+                             this player has played.
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""select v.player_id,
+    cur.execute("""SELECT v.player_id,
                           v.player_name,
                           v.wins,
                           v.losses,
                           v.draws,
-                          (v.wins + v.losses + v.draws) as matches,
+                          (v.wins + v.losses + v.draws) AS matches,
                           v.opponent_match_wins
-                     from v_player_standings v
-                    where v.tourn_id = %s
+                     FROM v_player_standings v
+                    WHERE v.tourn_id = %s
                 """, (tourn_id,))
     rows = cur.fetchall()
     results = []
@@ -188,12 +192,12 @@ def swissPairings(tourn_id):
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""select p.player_1_id,
+    cur.execute("""SELECT p.player_1_id,
                           p.player_1_name,
                           p.player_2_id,
                           p.player_2_name
-                     from v_swiss_matchups p
-                    where p.tourn_id = %s
+                     FROM v_swiss_matchups p
+                    WHERE p.tourn_id = %s
                 """, (tourn_id,))
     rows = cur.fetchall()
     results = []
