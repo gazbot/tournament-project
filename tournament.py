@@ -11,34 +11,52 @@ def connect():
     return psycopg2.connect("dbname=tournament")
 
 
-def deleteMatches():
+def createTournament(tourn_description, tourn_date):
+    """Create new tournament, return the tournament ID"""
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute("""insert into t_tournaments (tourn_description,
+                                             tourn_date)
+                                    values  (%s, %s)""",
+                (tourn_description, tourn_date, ))
+    conn.commit()
+    cur.execute("""select max(tourn_id) from t_tournaments""")
+    row = cur.fetchone()
+
+    return row[0]
+
+
+def deleteMatches(tourn_id):
     """Remove all the match records from the database."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""delete from t_rounds""")
+    cur.execute("""delete from t_matches where tourn_id = %s""", (tourn_id,))
     conn.commit()
+    conn.close()
 
 
-def deletePlayers():
+def deletePlayers(tourn_id):
     """Remove all the player records from the database."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("delete from t_players")
+    cur.execute("delete from t_registrations where tourn_id = %s", (tourn_id,))
     conn.commit()
+    conn.close()
 
 
-def countPlayers():
+def countPlayers(tourn_id):
     """Returns the number of players currently registered."""
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""select count(player_id) as player_count
-                     from t_players""")
+    cur.execute("""select count(r.player_id) as player_count
+                     from t_registrations r
+                    where r.tourn_id = %s""", (tourn_id,))
     row = cur.fetchone()
-    player_count = row[0]
-    return player_count
+    conn.close()
+    return row[0]
 
 
-def registerPlayer(name):
+def registerPlayer(tourn_id, name):
     """Adds a player to the tournament database.
 
     The database assigns a unique serial id number for the player.  (This
@@ -51,9 +69,19 @@ def registerPlayer(name):
     cur = conn.cursor()
     cur.execute("insert into t_players (player_name) values (%s)", (name,))
     conn.commit()
+    cur.execute("""insert into t_registrations (tourn_id, player_id) as
+                   select t.tourn_id,
+                          (select max(player_id)
+                             from t_players) as new_player_id)
+                     from t_tournaments t
+                    where t.tourn_id = %s""", (tourn_id, ))
+    conn.commit()
+    conn.close()
+
+    return row[0]
 
 
-def playerStandings():
+def playerStandings(tourn_id):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a
@@ -68,43 +96,82 @@ def playerStandings():
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""select p.player_id,
-                          p.player_name,
-                          count(rw.player_id_win) as player_wins,
-                          count(rm.round_id) as player_matches
-                     from t_players p
-                       left outer join t_rounds rw
-                         on (p.player_id = rw.player_id_win)
-                       left outer join t_rounds rm
-                         on ((p.player_id = rm.player_id_win)
-                          or (p.player_id = rm.player_id_loss))
-                   group by p.player_id, p.player_name
-                   order by count(rw.player_id_win) desc
-                """)
+    cur.execute("""select v.player_id,
+                          v.player_name,
+                          v.wins,
+                          v.losses,
+                          v.draws,
+                          (v.wins + v.losses + v.draws) as matches,
+                          v.opponent_match_wins
+                     from v_player_standings v
+                    where v.tourn_id = %s
+                """, (tourn_id,))
     rows = cur.fetchall()
     results = []
     for row in rows:
         results.append(row)
-
+    conn.close()
     return results
 
 
-def reportMatch(winner, loser):
+def reportMatch(tourn_id, winner, loser, draw_flag):
     """Records the outcome of a single match between two players.
 
     Args:
-      winner:  the id number of the player who won
-      loser:  the id number of the player who lost
+      winner   : the id number of the player who won
+      loser    : the id number of the player who lost
+      draw_flag: 'Y' to indicate a draw, 'N' to indicate a standard result
     """
     conn = connect()
     cur = conn.cursor()
+    # Insert the winning record, or mark as a draw if designated
     cur.execute("""
-                insert into t_rounds (tourn_id, player_id_win, player_id_loss)
-                values (1, %s, %s)""", (winner, loser, ))
+                INSERT INTO t_matches (tourn_id,
+                                       match_no,
+                                       player_id,
+                                       result_type)
+                SELECT %s AS tourn_id,
+                       COALESCE(MAX(m.match_no),0)+1 AS match_no,
+                       %s AS player_id,
+                       CASE
+                         WHEN %s = 'Y' THEN 'D'
+                         ELSE 'W'
+                       END AS result_type
+                  FROM t_tournaments t
+                     LEFT OUTER JOIN t_matches m
+                       ON (m.tourn_id = t.tourn_id)
+                 WHERE t.tourn_id = %s
+                """, (tourn_id,
+                      winner,
+                      draw_flag,
+                      tourn_id))
     conn.commit()
+    # Insert the losing record, or mark as a draw if required.
+    cur.execute("""
+                INSERT INTO t_matches (tourn_id,
+                                       match_no,
+                                       player_id,
+                                       result_type)
+                SELECT %s AS tourn_id,
+                       COALESCE(MAX(m.match_no),0) AS match_no,
+                       %s AS player_id,
+                       CASE
+                         WHEN %s = 'Y' THEN 'D'
+                         ELSE 'L'
+                       END AS result_type
+                  FROM t_tournaments t
+                     LEFT OUTER JOIN t_matches m
+                       ON (m.tourn_id = t.tourn_id)
+                 WHERE t.tourn_id = %s
+                """, (tourn_id,
+                      loser,
+                      draw_flag,
+                      tourn_id))
+    conn.commit()
+    conn.close()
 
 
-def swissPairings():
+def swissPairings(tourn_id):
     """Returns a list of pairs of players for the next round of a match.
 
     Assuming that there are an even number of players registered, each player
@@ -121,24 +188,17 @@ def swissPairings():
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("""
-                select p1.player_id as player_1_id,
-                       p1.player_name as player_1_name,
-                       p2.player_id as player_2_id,
-                       p2.player_name as player_2_name
-                  from v_standings v1,
-                       v_standings v2,
-                       t_players p1,
-                       t_players p2
-                 where  (v1.player_rank < v2.player_rank
-                     and v2.player_rank - v1.player_rank = 1)
-                   and v1.player_id = p1.player_id
-                   and v2.player_id = p2.player_id
-                   and v1.player_wins = v2.player_wins
-                """)
+    cur.execute("""select p.player_1_id,
+                          p.player_1_name,
+                          p.player_2_id,
+                          p.player_2_name
+                     from v_swiss_matchups p
+                    where p.tourn_id = %s
+                """, (tourn_id,))
     rows = cur.fetchall()
     results = []
     for row in rows:
         results.append(row)
+    conn.close()
 
     return results
